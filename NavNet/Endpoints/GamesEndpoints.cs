@@ -1,4 +1,3 @@
-using System.ComponentModel.DataAnnotations;
 using NavNet.Dtos;
 
 namespace NavNet.Endpoints;
@@ -24,9 +23,6 @@ public static class GamesEndpoints
 
         group.MapPost("/", (CreateGameDto newGame) =>
         {
-            if (!TryValidate(newGame, out var errors))
-                return Results.ValidationProblem(errors);
-
             GameDto game = new(games.Count + 1, newGame.Name, newGame.Genre, newGame.Price, newGame.ReleaseDate);
             games.Add(game);
             return Results.CreatedAtRoute("GetGameManual", new { id = game.Id }, game);
@@ -34,9 +30,6 @@ public static class GamesEndpoints
 
         group.MapPut("/{id}", (int id, FullUpdateGameDto updatedGame) =>
         {
-            if (!TryValidate(updatedGame, out var errors))
-                return Results.ValidationProblem(errors);
-
             var index = games.FindIndex(g => g.Id == id);
             if (index == -1) return Results.NotFound();
 
@@ -46,9 +39,6 @@ public static class GamesEndpoints
 
         group.MapPatch("/{id}", (int id, UpdateGameDto patch) =>
         {
-            if (!TryValidate(patch, out var errors))
-                return Results.ValidationProblem(errors);
-
             var index = games.FindIndex(g => g.Id == id);
             if (index == -1) return Results.NotFound();
 
@@ -71,18 +61,5 @@ public static class GamesEndpoints
             games.RemoveAt(index);
             return Results.NoContent();
         });
-    }
-
-    private static bool TryValidate(object dto, out Dictionary<string, string[]> errors)
-    {
-        var context = new ValidationContext(dto);
-        var results = new List<ValidationResult>();
-        bool isValid = Validator.TryValidateObject(dto, context, results, validateAllProperties: true);
-
-        errors = results
-            .GroupBy(r => r.MemberNames.FirstOrDefault() ?? string.Empty)
-            .ToDictionary(g => g.Key, g => g.Select(r => r.ErrorMessage ?? "Invalid").ToArray());
-
-        return isValid;
     }
 }

@@ -1,8 +1,10 @@
+using Microsoft.EntityFrameworkCore;
 using NavNet.Endpoints;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
+builder.Services.AddValidation();
 builder.Services.AddDbContext<NavNet.Data.AppDbContext>(opt =>
     opt.UseSqlite("Data Source=games.db"));
 
