@@ -1,0 +1,35 @@
+@host = http://localhost:5204
+
+### Get hello world
+GET {{host}}/
+
+### Get all games
+GET {{host}}/Games
+
+### Get game by id
+GET {{host}}/Games/1
+
+### Create a game
+POST {{host}}/Games
+Content-Type: application/json
+
+{
+  "name": "Hollow Knight",
+  "genre": "Metroidvania",
+  "price": 14.99,
+  "releaseDate": "2017-02-24"
+}
+
+### Update a game
+PUT {{host}}/Games/1
+Content-Type: application/json
+
+{
+  "name": "Spacewar Deluxe",
+  "genre": "Action",
+  "price": 4.99,
+  "releaseDate": "1962-10-19"
+}
+
+### Delete a game
+DELETE {{host}}/Games/1
