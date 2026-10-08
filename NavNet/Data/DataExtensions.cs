@@ -28,15 +28,17 @@ public static class DataExtensions
 
         if (!dbContext.Games.Any())
         {
+            var genreIds = dbContext.Genres.ToDictionary(g => g.Name, g => g.Id);
+
             dbContext.Games.AddRange(
-                new Game { Name = "Spacewar", GenreId = 1, Price = 9.99M, ReleaseDate = new DateOnly(1962, 10, 19) },
-                new Game { Name = "Pong", GenreId = 2, Price = 0.00M, ReleaseDate = new DateOnly(1972, 11, 29) },
-                new Game { Name = "The Legend of Zelda", GenreId = 3, Price = 59.99M, ReleaseDate = new DateOnly(1986, 2, 21) },
-                new Game { Name = "Doom", GenreId = 4, Price = 19.99M, ReleaseDate = new DateOnly(1993, 12, 10) },
-                new Game { Name = "Half-Life 2", GenreId = 4, Price = 9.99M, ReleaseDate = new DateOnly(2004, 11, 16) },
-                new Game { Name = "Stardew Valley", GenreId = 5, Price = 14.99M, ReleaseDate = new DateOnly(2016, 2, 26) },
-                new Game { Name = "Hades", GenreId = 6, Price = 24.99M, ReleaseDate = new DateOnly(2020, 9, 17) },
-                new Game { Name = "Elden Ring", GenreId = 7, Price = 59.99M, ReleaseDate = new DateOnly(2022, 2, 25) }
+                new Game { Name = "Spacewar", GenreId = genreIds["Action"], Price = 9.99M, ReleaseDate = new DateOnly(1962, 10, 19) },
+                new Game { Name = "Pong", GenreId = genreIds["Sports"], Price = 0.00M, ReleaseDate = new DateOnly(1972, 11, 29) },
+                new Game { Name = "The Legend of Zelda", GenreId = genreIds["Adventure"], Price = 59.99M, ReleaseDate = new DateOnly(1986, 2, 21) },
+                new Game { Name = "Doom", GenreId = genreIds["FPS"], Price = 19.99M, ReleaseDate = new DateOnly(1993, 12, 10) },
+                new Game { Name = "Half-Life 2", GenreId = genreIds["FPS"], Price = 9.99M, ReleaseDate = new DateOnly(2004, 11, 16) },
+                new Game { Name = "Stardew Valley", GenreId = genreIds["Simulation"], Price = 14.99M, ReleaseDate = new DateOnly(2016, 2, 26) },
+                new Game { Name = "Hades", GenreId = genreIds["Roguelike"], Price = 24.99M, ReleaseDate = new DateOnly(2020, 9, 17) },
+                new Game { Name = "Elden Ring", GenreId = genreIds["RPG"], Price = 59.99M, ReleaseDate = new DateOnly(2022, 2, 25) }
             );
             dbContext.SaveChanges();
         }

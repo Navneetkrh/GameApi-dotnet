@@ -4,7 +4,7 @@ using NavNet.Dtos;
 namespace NavNet.Controllers;
 
 [ApiController]
-[Route("[controller]")]
+[Route("api/[controller]")]
 public class GamesController : ControllerBase
 {
     private static List<GameDto> games = [
