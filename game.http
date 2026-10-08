@@ -42,3 +42,66 @@ Content-Type: application/json
 
 ### Minimal: delete a game
 DELETE {{host}}/games/1
+
+### Auth: register (minimal, open)
+POST {{host}}/auth/register
+Content-Type: application/json
+
+{
+  "username": "player1",
+  "password": "S3cret-pass!"
+}
+
+### Auth: login (minimal, open)
+POST {{host}}/auth/login
+Content-Type: application/json
+
+{
+  "username": "player1",
+  "password": "S3cret-pass!"
+}
+
+# paste the token from login/register, then retry the writes below
+@token = PASTE-TOKEN-HERE
+
+### Minimal: create a game (authorized)
+POST {{host}}/games
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Hollow Knight",
+  "genreId": 16,
+  "price": 14.99,
+  "releaseDate": "2017-02-24"
+}
+
+### MVC: register
+POST {{host}}/api/Auth/register
+Content-Type: application/json
+
+{
+  "username": "player1",
+  "password": "S3cret-pass!"
+}
+
+### MVC: login
+POST {{host}}/api/Auth/login
+Content-Type: application/json
+
+{
+  "username": "player1",
+  "password": "S3cret-pass!"
+}
+
+### MVC: create a game (authorized)
+POST {{host}}/api/Games
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Celeste",
+  "genreId": 16,
+  "price": 19.99,
+  "releaseDate": "2018-01-25"
+}

@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using NavNet.Data;
@@ -33,6 +34,7 @@ public class GamesController(AppDbContext db) : ControllerBase
     }
 
     [HttpPost]
+    [Authorize]
     public async Task<ActionResult<GameDto>> CreateGame(CreateGameDto newGame)
     {
         if (!await db.Genres.AnyAsync(g => g.Id == newGame.GenreId))
@@ -56,6 +58,7 @@ public class GamesController(AppDbContext db) : ControllerBase
     }
 
     [HttpPut("{id}")]
+    [Authorize]
     public async Task<IActionResult> UpdateGame(int id, FullUpdateGameDto updatedGame)
     {
         var game = await db.Games.FindAsync(id);
@@ -80,6 +83,7 @@ public class GamesController(AppDbContext db) : ControllerBase
     }
 
     [HttpPatch("{id}")]
+    [Authorize]
     public async Task<IActionResult> PatchGame(int id, UpdateGameDto patch)
     {
         var game = await db.Games.FindAsync(id);
@@ -105,6 +109,7 @@ public class GamesController(AppDbContext db) : ControllerBase
     }
 
     [HttpDelete("{id}")]
+    [Authorize]
     public async Task<IActionResult> DeleteGame(int id)
     {
         var game = await db.Games.FindAsync(id);

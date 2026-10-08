@@ -46,7 +46,7 @@ public static class GamesEndpoints
                 "GetGameManual",
                 new { id = game.Id },
                 new GameDto(game.Id, game.Name, game.GenreId, game.Price, game.ReleaseDate));
-        });
+        }).RequireAuthorization();
 
         group.MapPut("/{id}", async (int id, FullUpdateGameDto updatedGame, AppDbContext db) =>
         {
@@ -65,7 +65,7 @@ public static class GamesEndpoints
 
             await db.SaveChangesAsync();
             return Results.NoContent();
-        });
+        }).RequireAuthorization();
 
         group.MapPatch("/{id}", async (int id, UpdateGameDto patch, AppDbContext db) =>
         {
@@ -85,7 +85,7 @@ public static class GamesEndpoints
 
             await db.SaveChangesAsync();
             return Results.NoContent();
-        });
+        }).RequireAuthorization();
 
         group.MapDelete("/{id}", async (int id, AppDbContext db) =>
         {
@@ -95,7 +95,7 @@ public static class GamesEndpoints
             db.Games.Remove(game);
             await db.SaveChangesAsync();
             return Results.NoContent();
-        });
+        }).RequireAuthorization();
     }
 
     public static void MapGenreEndpoints(this WebApplication app)

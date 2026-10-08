@@ -23,6 +23,7 @@ Test with `game.http` (VS Code REST Client) or curl.
 | Doc | What |
 |---|---|
 | `NavNet/APPFLOW.md` | Full app flow: startup → request → shutdown, with diagrams |
+| `NavNet/AUTH.md` | JWT auth: users, hashing, tokens, protecting writes |
 | `NavNet/RUNTIME.md` | Threads, memory/GC, disposal, SQLite concurrency, scaling |
 | `NavNet/RUNTIME.md` | How the webapp works: threads, memory/GC, DI scopes, SQLite concurrency |
 | `NavNet/CONFIG.md` | Configuration: layers, options, secrets, terminal overrides |
