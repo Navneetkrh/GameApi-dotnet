@@ -1,0 +1,70 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>.NET vs ASP.NET Core — Internals</title>
+<style>
+:root{--bg:#0f172a;--card:#1e293b;--ts:#38bdf8;--cs:#a78bfa;--ok:#34d399;--warn:#fbbf24;--txt:#e2e8f0;--mut:#94a3b8;--pink:#f472b6}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--txt);font:16px/1.6 system-ui,sans-serif}
+.wrap{max-width:960px;margin:0 auto;padding:32px 20px 80px}
+h1{font-size:2rem;margin:0}.sub{color:var(--mut);margin:6px 0 20px}
+.card{background:var(--card);border:1px solid #334155;border-radius:14px;padding:20px;margin:18px 0}
+h2{margin:0 0 10px;font-size:1.25rem}
+pre{background:#020617;border:1px solid #334155;border-radius:10px;padding:14px;overflow:auto;font-size:.85rem}
+code{font-family:ui-monospace,Consolas,monospace}
+.k-ts{color:var(--ts)}.k-cs{color:var(--cs)}.k-ok{color:var(--ok)}.k-warn{color:var(--warn)}.mut{color:var(--mut)}.file{color:var(--pink)}
+.flow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:12px 0}
+.node{background:#020617;border:1px solid #475569;border-radius:10px;padding:8px 12px;font-size:.85rem}
+.arrow{color:var(--ok);font-weight:700}
+.badge{display:inline-block;font-size:.75rem;font-weight:700;padding:2px 10px;border-radius:999px;margin-right:8px}
+.b-net{background:#082f49;color:var(--ts);border:1px solid var(--ts)}
+.b-web{background:#2e1065;color:var(--cs);border:1px solid var(--cs)}
+.table{width:100%;border-collapse:collapse;font-size:.9rem}.table th,.table td{border:1px solid #334155;padding:8px 10px;text-align:left}.table th{background:#020617}
+.try{border-left:4px solid var(--ok);background:#022c22;padding:10px 14px;border-radius:0 10px 10px 0;margin-top:12px}
+a{color:var(--ts)}
+</style></head><body><div class="wrap">
+<h1>⚙️ .NET vs ASP.NET Core <span style="color:var(--mut)">— internals via NavNet</span></h1>
+<div class="sub"><span class="badge b-net">.NET = runtime</span><span class="badge b-web">ASP.NET Core = web on top</span></div>
+
+<div class="card"><h2><span class="badge b-net">.NET</span> What happens to your code</h2>
+<div class="flow"><div class="node">GameDto.cs</div><div class="arrow">→</div><div class="node">C# compiler</div><div class="arrow">→</div><div class="node">CIL + metadata (.dll)</div><div class="arrow">→</div><div class="node">JIT first call</div><div class="arrow">→</div><div class="node k-ok">native code</div></div>
+<p><span class="k-ts">■ CIL:</span> CPU-independent. Same dll on Mac/Win/Linux.</p>
+<p><span class="k-ts">■ Metadata:</span> types + <span style="color:#facc15">namespaces</span>. File paths gone — identity = <code>Assembly + Namespace + Name</code>.</p>
+<p><span class="k-ok">■ JIT:</span> compiles per-method on first call, caches.</p>
+<p><span class="k-warn">■ GC:</span> frees <code>new Game()</code> when unreachable. Gen0 (DTO per request) → Gen2 (singleton <code>TokenService</code>). No <code>free()</code>.</p>
+<p class="mut">TS map: tsc → js → V8 ≈ csc → CIL → RyuJIT. Both GC'd.</p>
+<p>📄 <a href="https://learn.microsoft.com/en-us/dotnet/standard/clr">CLR overview</a> • <a href="https://learn.microsoft.com/en-us/dotnet/standard/managed-execution-process">CIL→JIT</a> • <a href="https://learn.microsoft.com/en-us/dotnet/standard/garbage-collection/fundamentals">GC</a></p>
+</div>
+
+<div class="card"><h2><span class="badge b-web">ASP.NET Core</span> What happens to a request</h2>
+<div class="flow"><div class="node">Browser</div><div class="arrow">→</div><div class="node k-cs">Kestrel</div><div class="arrow">→</div><div class="node">Middleware</div><div class="arrow">→</div><div class="node">Routing</div><div class="arrow">→</div><div class="node k-ok">Endpoint</div></div>
+<pre><code><span class="mut">//</span> <span class="file">NavNet/Program.cs:9-49</span>
+<span class="k-cs">var</span> builder = WebApplication.<span class="k-cs">CreateBuilder</span>(args);
+builder.Services.<span class="k-cs">AddSingleton</span>&lt;TokenService&gt;(); <span class="mut">// DI: what to inject</span>
+<span class="k-cs">var</span> app = builder.<span class="k-cs">Build</span>();
+app.<span class="k-cs">UseAuthentication</span>(); <span class="mut">// who are you?</span>
+app.<span class="k-cs">UseAuthorization</span>();  <span class="mut">// allowed?</span>
+app.<span class="k-cs">MapControllers</span>();    <span class="mut">// controllers</span>
+app.<span class="k-cs">MapGamesEndpoints</span>(); <span class="mut">// minimal API</span>
+app.<span class="k-cs">Run</span>(); <span class="mut">// start Kestrel</span></code></pre>
+<p class="mut">Order = file order down for request, reverse up for response.</p>
+<div class="try">▶ <b>Try:</b> add before auth:<br/><code>app.Use(async (ctx, next) => { Console.WriteLine($"IN {ctx.Request.Path}"); await next(); Console.WriteLine("OUT"); });</code><br/>Hit /games → IN → endpoint → OUT.</div>
+<p>📄 <a href="https://learn.microsoft.com/en-us/aspnet/core/fundamentals/?view=aspnetcore-10.0">Fundamentals</a> • <a href="https://learn.microsoft.com/en-us/aspnet/core/fundamentals/middleware/?view=aspnetcore-10.0">Middleware</a> • <a href="https://learn.microsoft.com/en-us/aspnet/core/fundamentals/routing?view=aspnetcore-10.0">Routing</a> • <a href="https://learn.microsoft.com/en-us/aspnet/core/fundamentals/servers/kestrel?view=aspnetcore-10.0">Kestrel</a></p>
+</div>
+
+<div class="card"><h2>Full example: GET /games/1</h2>
+<pre><code>1. Kestrel → HttpContext
+2. UseAuthentication (JWT) → UseAuthorization ([Authorize])
+3. Routing picks <span class="k-ok">MapGet("/{id}")</span> <span class="mut">GamesEndpoints.cs:18</span>
+4. DI gives <span class="k-cs">AppDbContext db</span> (scoped)
+5. LINQ: <span class="k-cs">Where</span>(filter).<span class="k-cs">Select</span>(map).<span class="k-cs">FirstOrDefaultAsync</span>()
+6. Results.Ok(dto) → JSON → back up → browser</code></pre>
+</div>
+
+<div class="card"><h2>Cheat</h2>
+<table class="table"><tr><th>Node</th><th>.NET</th><th>ASP.NET Core</th></tr>
+<tr><td class="k-ts">node</td><td>CLR + GC + JIT</td><td>—</td></tr>
+<tr><td class="k-ts">express()</td><td>—</td><td class="k-cs">CreateBuilder/Build</td></tr>
+<tr><td class="k-ts">app.use()</td><td>—</td><td class="k-cs">app.UseX()</td></tr>
+<tr><td class="k-ts">app.get()</td><td>—</td><td class="k-cs">MapGet/MapControllers</td></tr>
+<tr><td class="k-ts">npm pkg</td><td>assembly .dll</td><td>NuGet Microsoft.AspNetCore.*</td></tr>
+</table></div>
+</div></body></html>

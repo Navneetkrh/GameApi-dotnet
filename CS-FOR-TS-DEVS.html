@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>C# for TS Devs — Full Picture</title>
+<style>
+:root{--bg:#0f172a;--card:#1e293b;--ts:#38bdf8;--cs:#a78bfa;--ok:#34d399;--warn:#fbbf24;--txt:#e2e8f0;--mut:#94a3b8}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--txt);font:16px/1.6 system-ui,Segoe UI,Roboto,sans-serif}
+.wrap{max-width:960px;margin:0 auto;padding:32px 20px 80px}
+h1{font-size:2.2rem;margin:0 0 8px}.sub{color:var(--mut);margin-bottom:24px}
+.card{background:var(--card);border:1px solid #334155;border-radius:14px;padding:20px 20px;margin:18px 0}
+.card h2{margin:0 0 10px;font-size:1.25rem}
+.badge{display:inline-block;font-size:.75rem;font-weight:700;padding:2px 10px;border-radius:999px;margin-right:8px;vertical-align:middle}
+.b-ts{background:#082f49;color:var(--ts);border:1px solid var(--ts)}
+.b-cs{background:#2e1065;color:var(--cs);border:1px solid var(--cs)}
+.b-ok{background:#064e3b;color:var(--ok);border:1px solid var(--ok)}
+.b-warn{background:#451a03;color:var(--warn);border:1px solid var(--warn)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}@media(max-width:700px){.grid{grid-template-columns:1fr}}
+pre{background:#020617;border:1px solid #334155;border-radius:10px;padding:14px;overflow:auto;font-size:.85rem}
+code{font-family:ui-monospace,Cascadia Code,Consolas,monospace}
+.k-ts{color:var(--ts)}.k-cs{color:var(--cs)}.k-ok{color:var(--ok)}.k-warn{color:var(--warn)}.mut{color:var(--mut)}
+.file{color:#f472b6}.ns{color:#facc15}.cls{color:#5eead4}
+.table{width:100%;border-collapse:collapse;font-size:.9rem}.table th,.table td{border:1px solid #334155;padding:8px 10px;text-align:left}.table th{background:#020617}
+.try{border-left:4px solid var(--ok);background:#022c22;padding:10px 14px;border-radius:0 10px 10px 0;margin-top:12px}
+a{color:var(--ts)}
+</style></head>
+<body><div class="wrap">
+<h1>🟦 C# for TS Devs <span style="color:var(--mut)">— Full Picture via NavNet</span></h1>
+<div class="sub">Blue = TypeScript &nbsp;•&nbsp; Purple = C# &nbsp;•&nbsp; Pink = file &nbsp;•&nbsp; Yellow = namespace &nbsp;•&nbsp; Teal = class</div>
+
+<div class="card"><h2><span class="badge b-ts">TS</span><span class="badge b-cs">C#</span> 0. Project file</h2>
+<div class="grid"><div><span class="k-ts">■ package.json</span><pre><code>{
+  "dependencies": {...},
+  "scripts": {"dev": "..."}
+}</code></pre></div>
+<div><span class="k-cs">■ NavNet/NavNet.csproj:1-18</span><pre><code><span class="mut">&lt;TargetFramework&gt;</span>net10.0<span class="mut">&lt;/&gt;</span> <span class="mut">← node version</span>
+<span class="mut">&lt;Nullable&gt;</span>enable<span class="mut">&lt;/&gt;</span> <span class="mut">← strictNullChecks</span>
+<span class="mut">&lt;ImplicitUsings&gt;</span>enable<span class="mut">&lt;/&gt;</span> <span class="mut">← auto-import</span></code></pre></div></div>
+<div class="try">▶ <b>Try:</b> <code>dotnet run --project NavNet</code> = <code>npm run dev</code></div></div>
+
+<div class="card"><h2>1. Startup — <span class="file">NavNet/Program.cs:9-49</span></h2>
+<div class="grid"><div><span class="k-ts">■ Express</span><pre><code><span class="k-ts">const</span> app = <span class="k-ts">express</span>()
+app.<span class="k-ts">use</span>(auth)
+app.<span class="k-ts">get</span>(<span class="k-ok">'/games'</span>, handler)
+app.<span class="k-ts">listen</span>(3000)</code></pre></div>
+<div><span class="k-cs">■ C#</span><pre><code><span class="k-cs">var</span> builder = WebApplication.<span class="k-cs">CreateBuilder</span>(args);
+builder.Services.<span class="k-cs">AddControllers</span>();
+builder.Services.<span class="k-cs">AddSingleton</span>&lt;TokenService&gt;();
+<span class="k-cs">var</span> app = builder.<span class="k-cs">Build</span>();
+app.<span class="k-cs">UseAuthentication</span>();
+app.<span class="k-cs">MapControllers</span>();
+app.<span class="k-cs">Run</span>();</code></pre></div></div>
+<p class="mut">Pattern: <b>Services</b> = what to inject, <b>Use/Map</b> = how requests flow.</p></div>
+
+<div class="card"><h2>2. <span class="k-ts">import</span> vs <span class="k-cs">using</span></h2>
+<p><span class="k-ts">TS imports by <b>file path</b>:</span> <code>import {GameDto} from './Dtos/GameDto.js'</code></p>
+<p><span class="k-cs">C# imports by <b>namespace</b>:</span> <code><span class="k-cs">using</span> <span class="ns">NavNet.Dtos</span>;</code> <span class="mut">— NavNet/Endpoints/GamesEndpoints.cs:1-4</span></p></div>
+
+<div class="card"><h2>3. Namespace = last-name <span class="badge b-warn">NOT file/folder</span></h2>
+<pre><code><span class="mut">//</span> <span class="file">NavNet/Dtos/GameDto.cs:4</span>
+<span class="k-cs">namespace</span> <span class="ns">NavNet.Dtos</span>;
+<span class="k-cs">public record class</span> <span class="cls">GameDto</span>(...);  <span class="mut">→ full name =</span> <span class="ns">NavNet.Dtos</span>.<span class="cls">GameDto</span>
+
+<span class="mut">//</span> <span class="file">NavNet/Models/Game.cs:1</span>
+<span class="k-cs">namespace</span> <span class="ns">NavNet.Models</span>;
+<span class="k-cs">public class</span> <span class="cls">Game</span> {...}  <span class="mut">→</span> <span class="ns">NavNet.Models</span>.<span class="cls">Game</span></code></pre>
+<div class="grid"><div><pre><code><span class="k-cs">using</span> <span class="ns">NavNet.Dtos</span>;
+<span class="k-cs">var</span> x = <span class="k-ok">new</span> <span class="cls">GameDto</span>(...); <span class="mut">// short</span></code></pre></div>
+<div><pre><code><span class="k-cs">var</span> y = <span class="k-ok">new</span> <span class="ns">NavNet.Dtos</span>.<span class="cls">GameDto</span>(...);
+<span class="mut">// long, no using needed</span></code></pre></div></div>
+<div class="card" style="background:#451a03;border-color:#fbbf24"><b class="k-warn">⚠ Bad org that still works (verified with dotnet run):</b><pre><code><span class="mut">// File: Demo/WrongFolder/FileA.cs — folder≠file≠namespace, still compiles</span>
+<span class="k-cs">namespace</span> <span class="ns">Demo.Dtos</span>;
+<span class="k-cs">public class</span> <span class="cls">Bar</span> { ... }</code></pre>
+Compiler looks at <span class="ns">namespace</span>, never at path.</div>
+<div class="try">▶ <b>Try:</b> rename <code>namespace NavNet.Dtos</code> → <code>namespace Foo</code>, fix with <code>using Foo;</code>. Builds. Change back.</div></div>
+
+<div class="card"><h2>4. Static <span class="badge b-warn">toolbox</span> vs Instance <span class="badge b-ok">employee</span></h2>
+<div class="grid"><div><span class="k-warn">■ Static — NavNet/Services/PasswordHelper.cs:6,12</span><pre><code><span class="k-cs">public static class</span> <span class="cls">PasswordHelper</span>
+{
+  <span class="k-cs">public static string</span> <span class="k-warn">Hash</span>(...) {...}
+}
+<span class="mut">// use:</span> PasswordHelper.<span class="k-warn">Hash</span>(<span class="k-ok">"pw"</span>)
+<span class="mut">// like Math.random() — no new</span></code></pre></div>
+<div><span class="k-ok">■ Instance — NavNet/Services/TokenService.cs:9,11</span><pre><code><span class="k-cs">public class</span> <span class="cls">TokenService</span>(config)
+{
+  <span class="k-cs">public string</span> <span class="k-ok">CreateToken</span>(user) {...}
+}
+<span class="mut">// use: AddSingleton&lt;TokenService&gt;()</span>
+<span class="mut">// then inject → svc.CreateToken(u)</span></code></pre></div></div>
+<p class="mut">Needs config/db/state → instance + DI. Pure function → static.</p></div>
+
+<div class="card"><h2>5. Two API styles, same job</h2>
+<div class="grid"><div><span class="k-cs">■ Controller — GamesController.cs:10,13</span><pre><code>[ApiController]
+[Route(<span class="k-ok">"api/[controller]"</span>)]
+<span class="k-cs">public class</span> <span class="cls">GamesController</span>(db)
+  : ControllerBase
+{
+  [HttpGet]
+  <span class="k-cs">public async Task</span>... <span class="k-ok">GetGames</span>() {...}
+}</code></pre></div>
+<div><span class="k-ts">■ Minimal — GamesEndpoints.cs:8,11</span><pre><code><span class="k-cs">public static class</span> <span class="cls">GamesEndpoints</span>
+{
+  MapGamesEndpoints(<span class="k-cs">this</span> app)
+  {
+    app.<span class="k-ts">MapGroup</span>(<span class="k-ok">"/games"</span>)
+       .<span class="k-ts">MapGet</span>(<span class="k-ok">"/"</span>, handler);
+  }
+}</code></pre></div></div></div>
+
+<div class="card"><h2>6. DTO vs Model &nbsp;•&nbsp; Validation &nbsp;•&nbsp; LINQ &nbsp;•&nbsp; Task &nbsp;•&nbsp; DI</h2>
+<p><span class="cls">■ Model</span> <span class="mut">NavNet/Models/Game.cs:3-11 — mutable DB shape:</span> <code>{ <span class="k-cs">get; set;</span> }</code> = <code class="k-ts">let</code></p>
+<p><span class="cls">■ DTO</span> <span class="mut">NavNet/Dtos/GameDto.cs:6-12 — immutable API shape:</span> <code><span class="k-cs">record</span> GameDto(...)</code></p>
+<p><span class="k-warn">■ Validation</span> <span class="mut">CreateGameDto.cs:5-10 — [Attr] = decorator:</span> <code>[<span class="k-warn">Required, Range(1,…)</span>] <span class="k-ts">int</span> GenreId</code></p>
+<pre><code><span class="mut">// TS:    games.filter(g=>g.id===id).map(g=>({id:g.id}))</span>
+<span class="mut">// C# GamesController.cs:17-18:</span>
+<span class="k-ok">await</span> db.Games.<span class="k-cs">Where</span>(g => g.Id == id)
+  .<span class="k-cs">Select</span>(g => <span class="k-ok">new</span> <span class="cls">GameDto</span>(...))
+  .<span class="k-cs">FirstOrDefaultAsync</span>();</code></pre>
+<p><span class="k-ts">Promise&lt;T&gt;</span> = <span class="k-cs">Task&lt;T&gt;</span> <span class="mut">— GamesController.cs:15, await identical.</span></p>
+<p><b>DI:</b> <code>builder.Services.AddSingleton&lt;<span class="cls">TokenService</span>&gt;()</code> <span class="mut">Program.cs:16</span> then just ask <code>(AppDbContext db, TokenService svc)</code> in handler — no path import.</p></div>
+
+<div class="card"><h2>Cheat sheet</h2>
+<table class="table"><tr><th>TS</th><th>C#</th></tr>
+<tr><td class="k-ts">import from './file'</td><td class="k-cs">using Namespace;</td></tr>
+<tr><td class="k-ts">package.json</td><td class="k-cs">NavNet.csproj</td></tr>
+<tr><td class="k-ts">express / app.get</td><td class="k-cs">Builder / MapGet / MapControllers</td></tr>
+<tr><td class="k-ts">filter / map / find</td><td class="k-cs">Where / Select / FirstOrDefaultAsync</td></tr>
+<tr><td class="k-ts">Promise&lt;T&gt;</td><td class="k-cs">Task&lt;T&gt;</td></tr>
+<tr><td class="k-ts">new Svc(config)</td><td class="k-cs">AddSingleton + inject</td></tr>
+<tr><td class="k-ts">Math.xxx()</td><td class="k-warn">static class.xxx()</td></tr>
+</table></div>
+</div></body></html>
