@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using NavNet.Data;
 using NavNet.Endpoints;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -15,5 +16,6 @@ app.MapControllers();
 app.MapGamesEndpoints();
 
 app.MapGet("/", () => "Hello World!");
+app.MigrateDb();
 
 app.Run();
