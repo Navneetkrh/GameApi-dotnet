@@ -14,6 +14,7 @@ var app = builder.Build();
 app.MapControllers();
 
 app.MapGamesEndpoints();
+app.MapGenreEndpoints();
 
 app.MapGet("/", () => "Hello World!");
 app.MigrateDb();

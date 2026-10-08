@@ -9,19 +9,25 @@ GET {{host}}/games
 ### Minimal: get game by id
 GET {{host}}/games/1
 
-### Minimal: create a game
+### Minimal: create a game (genreId from GET /genres)
 POST {{host}}/games
 Content-Type: application/json
 
 {
   "name": "Hollow Knight",
-  "genre": "Metroidvania",
+  "genreId": 8,
   "price": 14.99,
   "releaseDate": "2017-02-24"
 }
 
+### Minimal: list genres
+GET {{host}}/genres
+
 ### MVC: get all games
 GET {{host}}/api/Games
+
+### MVC: list genres
+GET {{host}}/api/Genres
 
 ### MVC: update a game
 PUT {{host}}/api/Games/1
@@ -29,7 +35,7 @@ Content-Type: application/json
 
 {
   "name": "Spacewar Deluxe",
-  "genre": "Action",
+  "genreId": 1,
   "price": 4.99,
   "releaseDate": "1962-10-19"
 }

@@ -12,15 +12,13 @@ public static class GamesEndpoints
         var group = app.MapGroup("/games");
 
         group.MapGet("/", async (AppDbContext db) =>
-            Results.Ok(await db.Games.Include(g => g.Genre)
-                .Select(g => new GameDto(g.Id, g.Name, g.Genre.Name, g.Price, g.ReleaseDate))
+            Results.Ok(await db.Games.Select(g => new GameDto(g.Id, g.Name, g.GenreId, g.Price, g.ReleaseDate))
                 .ToListAsync()));
 
         group.MapGet("/{id}", async (int id, AppDbContext db) =>
         {
-            var dto = await db.Games.Include(g => g.Genre)
-                .Where(g => g.Id == id)
-                .Select(g => new GameDto(g.Id, g.Name, g.Genre.Name, g.Price, g.ReleaseDate))
+            var dto = await db.Games.Where(g => g.Id == id)
+                .Select(g => new GameDto(g.Id, g.Name, g.GenreId, g.Price, g.ReleaseDate))
                 .FirstOrDefaultAsync();
 
             return dto is null ? Results.NotFound() : Results.Ok(dto);
@@ -28,12 +26,15 @@ public static class GamesEndpoints
 
         group.MapPost("/", async (CreateGameDto newGame, AppDbContext db) =>
         {
-            var genre = await GetOrCreateGenreAsync(db, newGame.Genre);
+            if (!await db.Genres.AnyAsync(g => g.Id == newGame.GenreId))
+            {
+                return Results.BadRequest($"Unknown genre id {newGame.GenreId}.");
+            }
 
             var game = new Game
             {
                 Name = newGame.Name,
-                Genre = genre,
+                GenreId = newGame.GenreId,
                 Price = newGame.Price,
                 ReleaseDate = newGame.ReleaseDate
             };
@@ -44,7 +45,7 @@ public static class GamesEndpoints
             return Results.CreatedAtRoute(
                 "GetGameManual",
                 new { id = game.Id },
-                new GameDto(game.Id, game.Name, genre.Name, game.Price, game.ReleaseDate));
+                new GameDto(game.Id, game.Name, game.GenreId, game.Price, game.ReleaseDate));
         });
 
         group.MapPut("/{id}", async (int id, FullUpdateGameDto updatedGame, AppDbContext db) =>
@@ -52,8 +53,13 @@ public static class GamesEndpoints
             var game = await db.Games.FindAsync(id);
             if (game is null) return Results.NotFound();
 
+            if (!await db.Genres.AnyAsync(g => g.Id == updatedGame.GenreId))
+            {
+                return Results.BadRequest($"Unknown genre id {updatedGame.GenreId}.");
+            }
+
             game.Name = updatedGame.Name;
-            game.Genre = await GetOrCreateGenreAsync(db, updatedGame.Genre);
+            game.GenreId = updatedGame.GenreId;
             game.Price = updatedGame.Price;
             game.ReleaseDate = updatedGame.ReleaseDate;
 
@@ -66,8 +72,14 @@ public static class GamesEndpoints
             var game = await db.Games.FindAsync(id);
             if (game is null) return Results.NotFound();
 
+            if (patch.GenreId is not null
+                && !await db.Genres.AnyAsync(g => g.Id == patch.GenreId))
+            {
+                return Results.BadRequest($"Unknown genre id {patch.GenreId}.");
+            }
+
             if (patch.Name is not null) game.Name = patch.Name;
-            if (patch.Genre is not null) game.Genre = await GetOrCreateGenreAsync(db, patch.Genre);
+            if (patch.GenreId is not null) game.GenreId = patch.GenreId.Value;
             if (patch.Price is not null) game.Price = patch.Price.Value;
             if (patch.ReleaseDate is not null) game.ReleaseDate = patch.ReleaseDate.Value;
 
@@ -86,16 +98,14 @@ public static class GamesEndpoints
         });
     }
 
-    private static async Task<Genre> GetOrCreateGenreAsync(AppDbContext db, string name)
+    public static void MapGenreEndpoints(this WebApplication app)
     {
-        var genre = await db.Genres.FirstOrDefaultAsync(g => g.Name == name);
+        var group = app.MapGroup("/genres");
 
-        if (genre is null)
-        {
-            genre = new Genre { Name = name };
-            db.Genres.Add(genre);
-        }
-
-        return genre;
+        group.MapGet("/", async (AppDbContext db) =>
+            Results.Ok(await db.Genres.AsNoTracking()
+                .OrderBy(g => g.Name)
+                .Select(g => new GenreDto(g.Id, g.Name))
+                .ToListAsync()));
     }
 }
