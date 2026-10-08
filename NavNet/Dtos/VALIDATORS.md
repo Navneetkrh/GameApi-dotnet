@@ -22,7 +22,7 @@ Example — your game:
 ```csharp
 public record CreateGameDto(
     [Required, StringLength(50, MinimumLength = 3)] string Name,
-    [Required] string Genre,
+    [Required, Range(1, int.MaxValue)] int GenreId,
     ...
 );
 ```
@@ -106,7 +106,7 @@ using System.ComponentModel.DataAnnotations;
 
 public record CreateGameDto(
     [Required, StringLength(50, MinimumLength = 3)] string Name,
-    [Required, AllowedValues("Action","Sports","Adventure","FPS","Simulation","Roguelike","RPG")] string Genre,
+    [Required, Range(1, int.MaxValue)] int GenreId,
     [Range(typeof(decimal), "0", "100")] decimal Price,
     [Required] DateOnly ReleaseDate,
     [MinLength(1), MaxLength(5)] List<string> Tags,

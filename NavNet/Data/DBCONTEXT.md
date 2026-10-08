@@ -206,9 +206,9 @@ db.Games.Add(game);
 await db.SaveChangesAsync();   // game.Id now set
 
 // READ: model → DTO (never return the entity directly)
-var dto = await db.Games.Include(g => g.Genre)
-    .Select(g => new GameDto(g.Id, g.Name, g.Genre.Name, g.Price, g.ReleaseDate))
-    .FirstOrDefaultAsync(g => g.Id == id);
+var dto = await db.Games.Where(g => g.Id == id)
+    .Select(g => new GameDto(g.Id, g.Name, g.GenreId, g.Price, g.ReleaseDate))
+    .FirstOrDefaultAsync();
 
 // UPDATE: fetch → mutate → save (tracking detects the diff)
 var game = await db.Games.FindAsync(id);
@@ -234,7 +234,7 @@ var page = await db.Games.AsNoTracking()
     .Where(g => g.Genre.Name == "FPS")
     .OrderBy(g => g.Price)
     .Skip(0).Take(10)
-    .Select(g => new GameDto(g.Id, g.Name, g.Genre.Name, g.Price, g.ReleaseDate))
+    .Select(g => new GameDto(g.Id, g.Name, g.GenreId, g.Price, g.ReleaseDate))
     .ToListAsync();
 
 // find-or-create genre by name (used in POST/PUT/PATCH)
@@ -275,3 +275,68 @@ var counts = await db.Games
 - `Include` navigations you read; `AsNoTracking` for pure reads.
 - One `SaveChanges` per request = one transaction.
 - Return DTOs, not entities (avoids lazy-load surprises + over-posting).
+
+## 14. Why map to a DTO — step by step with your classes
+
+Your two model classes (`Models/Game.cs:3-11`, `Models/Genre.cs:5-13`):
+
+```csharp
+class Game  { int Id; string Name; int GenreId; Genre Genre; ... }
+class Genre { int Id; string Name; List<Game> Games; }
+```
+
+Notice: the relationship exists **twice** in C# — once as an int (`GenreId`),
+once as objects (`Genre` / `Games`). The database stores only the int.
+The objects are a convenience wrapper EF builds in memory by JOINing.
+
+### Step 1 — what is actually in memory after your POST?
+
+`Endpoints/GamesEndpoints.cs:29-43`: `AnyAsync` answers true/false, it does
+NOT load any row. So after `SaveChanges`:
+
+```
+game.GenreId = 16          // real value, from the column
+game.Genre   = null        // nothing was ever loaded, so nothing to link
+```
+
+Returning `game` here would serialize as `{"genre": null}` — a leaked
+internal detail that contradicts `genreId: 16`.
+
+### Step 2 — what if the navigation IS loaded?
+
+Say a GET does `Include(g => g.Genre)` plus the genre's `Games` list.
+Now memory holds real references, and they point back at each other —
+not copies, the *same* objects:
+
+```
+game  ──Genre──> genre { Id: 16, Name: "Puzzle" }
+genre ──Games──> [ game, otherGame, ... ]   // Games[0] IS game, same address
+```
+
+### Step 3 — what the JSON serializer does
+
+`System.Text.Json` has one rule: walk every public property; if a property
+is an object or list, walk inside it too. Traced on the loaded graph:
+
+```
+1. write game.Id, game.Name, game.GenreId       // flat values, fine
+2. see game.Genre (object) → step inside
+3. write genre.Id, genre.Name                    // fine
+4. see genre.Games (list) → step into Games[0]
+5. Games[0] IS game → back to step 1… forever
+```
+
+It detects the loop and throws (`A possible object cycle was detected`) →
+500 instead of 201. Without a loop it still dumps the neighborhood: one
+game request returns its genre plus every other game in that genre.
+
+### Step 4 — why the DTO ends the walk
+
+```csharp
+new GameDto(game.Id, game.Name, game.GenreId, game.Price, game.ReleaseDate)
+// {"id":9,"name":"Hollow Knight","genreId":16,...} — ints/strings only,
+// no object property to follow, so the walk stops after one level.
+```
+
+Rule: entities are for the database (relationships as objects); DTOs are
+for the wire (relationships as ids). The mapping line converts worlds.

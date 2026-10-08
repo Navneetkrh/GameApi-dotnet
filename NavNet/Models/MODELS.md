@@ -30,7 +30,7 @@ modelBuilder.Entity<Game>().HasKey(g => new { g.Id, g.Region });
 [NotMapped]                            // property ignored by EF
 ```
 
-Example — your game:
+Example — your game (current FK design):
 ```csharp
 public class Game
 {
@@ -39,8 +39,8 @@ public class Game
     [MaxLength(256)]
     public string Name { get; set; } = string.Empty;
 
-    [MaxLength(256)]
-    public string Genre { get; set; } = string.Empty;
+    public int GenreId { get; set; }               // FK column → Genres.Id
+    public Genre Genre { get; set; } = null!;      // navigation (object view of same FK)
 
     [Column(TypeName = "decimal(10,2)")]
     public decimal Price { get; set; }
