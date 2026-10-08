@@ -1,65 +1,101 @@
+using Microsoft.EntityFrameworkCore;
+using NavNet.Data;
 using NavNet.Dtos;
+using NavNet.Models;
 
 namespace NavNet.Endpoints;
 
 public static class GamesEndpoints
 {
-    private static List<GameDto> games = [
-        new (1, "Spacewar", "Action", 9.99M, new DateOnly(1962, 10, 19)),
-        new (2, "Pong", "Sports", 0.00M, new DateOnly(1972, 11, 29))
-    ];
-
     public static void MapGamesEndpoints(this WebApplication app)
     {
         var group = app.MapGroup("/games");
 
-        group.MapGet("/", () => Results.Ok(games));
+        group.MapGet("/", async (AppDbContext db) =>
+            Results.Ok(await db.Games.Include(g => g.Genre)
+                .Select(g => new GameDto(g.Id, g.Name, g.Genre.Name, g.Price, g.ReleaseDate))
+                .ToListAsync()));
 
-        group.MapGet("/{id}", (int id) =>
+        group.MapGet("/{id}", async (int id, AppDbContext db) =>
         {
-            var game = games.Find(g => g.Id == id);
-            return game is null ? Results.NotFound() : Results.Ok(game);
+            var dto = await db.Games.Include(g => g.Genre)
+                .Where(g => g.Id == id)
+                .Select(g => new GameDto(g.Id, g.Name, g.Genre.Name, g.Price, g.ReleaseDate))
+                .FirstOrDefaultAsync();
+
+            return dto is null ? Results.NotFound() : Results.Ok(dto);
         }).WithName("GetGameManual");
 
-        group.MapPost("/", (CreateGameDto newGame) =>
+        group.MapPost("/", async (CreateGameDto newGame, AppDbContext db) =>
         {
-            GameDto game = new(games.Count + 1, newGame.Name, newGame.Genre, newGame.Price, newGame.ReleaseDate);
-            games.Add(game);
-            return Results.CreatedAtRoute("GetGameManual", new { id = game.Id }, game);
+            var genre = await GetOrCreateGenreAsync(db, newGame.Genre);
+
+            var game = new Game
+            {
+                Name = newGame.Name,
+                Genre = genre,
+                Price = newGame.Price,
+                ReleaseDate = newGame.ReleaseDate
+            };
+
+            db.Games.Add(game);
+            await db.SaveChangesAsync();
+
+            return Results.CreatedAtRoute(
+                "GetGameManual",
+                new { id = game.Id },
+                new GameDto(game.Id, game.Name, genre.Name, game.Price, game.ReleaseDate));
         });
 
-        group.MapPut("/{id}", (int id, FullUpdateGameDto updatedGame) =>
+        group.MapPut("/{id}", async (int id, FullUpdateGameDto updatedGame, AppDbContext db) =>
         {
-            var index = games.FindIndex(g => g.Id == id);
-            if (index == -1) return Results.NotFound();
+            var game = await db.Games.FindAsync(id);
+            if (game is null) return Results.NotFound();
 
-            games[index] = new GameDto(id, updatedGame.Name, updatedGame.Genre, updatedGame.Price, updatedGame.ReleaseDate);
+            game.Name = updatedGame.Name;
+            game.Genre = await GetOrCreateGenreAsync(db, updatedGame.Genre);
+            game.Price = updatedGame.Price;
+            game.ReleaseDate = updatedGame.ReleaseDate;
+
+            await db.SaveChangesAsync();
             return Results.NoContent();
         });
 
-        group.MapPatch("/{id}", (int id, UpdateGameDto patch) =>
+        group.MapPatch("/{id}", async (int id, UpdateGameDto patch, AppDbContext db) =>
         {
-            var index = games.FindIndex(g => g.Id == id);
-            if (index == -1) return Results.NotFound();
+            var game = await db.Games.FindAsync(id);
+            if (game is null) return Results.NotFound();
 
-            var existing = games[index];
-            games[index] = new GameDto(
-                id,
-                patch.Name ?? existing.Name,
-                patch.Genre ?? existing.Genre,
-                patch.Price ?? existing.Price,
-                patch.ReleaseDate ?? existing.ReleaseDate
-            );
+            if (patch.Name is not null) game.Name = patch.Name;
+            if (patch.Genre is not null) game.Genre = await GetOrCreateGenreAsync(db, patch.Genre);
+            if (patch.Price is not null) game.Price = patch.Price.Value;
+            if (patch.ReleaseDate is not null) game.ReleaseDate = patch.ReleaseDate.Value;
+
+            await db.SaveChangesAsync();
             return Results.NoContent();
         });
 
-        group.MapDelete("/{id}", (int id) =>
+        group.MapDelete("/{id}", async (int id, AppDbContext db) =>
         {
-            var index = games.FindIndex(g => g.Id == id);
-            if (index == -1) return Results.NotFound();
+            var game = await db.Games.FindAsync(id);
+            if (game is null) return Results.NotFound();
 
-            games.RemoveAt(index);
+            db.Games.Remove(game);
+            await db.SaveChangesAsync();
             return Results.NoContent();
         });
+    }
+
+    private static async Task<Genre> GetOrCreateGenreAsync(AppDbContext db, string name)
+    {
+        var genre = await db.Genres.FirstOrDefaultAsync(g => g.Name == name);
+
+        if (genre is null)
+        {
+            genre = new Genre { Name = name };
+            db.Genres.Add(genre);
+        }
+
+        return genre;
     }
 }

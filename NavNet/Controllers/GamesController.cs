@@ -1,113 +1,123 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using NavNet.Data;
 using NavNet.Dtos;
+using NavNet.Models;
 
 namespace NavNet.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class GamesController : ControllerBase
+public class GamesController(AppDbContext db) : ControllerBase
 {
-    private static List<GameDto> games = [
-        new (1, "Spacewar",          "Action",     9.99M,  new DateOnly(1962, 10, 19)),
-        new (2, "Pong",              "Sports",     0.00M,  new DateOnly(1972, 11, 29)),
-        new (3, "The Legend of Zelda","Adventure", 59.99M, new DateOnly(1986, 2, 21)),
-        new (4, "Doom",              "FPS",        19.99M, new DateOnly(1993, 12, 10)),
-        new (5, "Half-Life 2",       "FPS",        9.99M,  new DateOnly(2004, 11, 16)),
-        new (6, "Stardew Valley",    "Simulation", 14.99M, new DateOnly(2016, 2, 26)),
-        new (7, "Hades",             "Roguelike",  24.99M, new DateOnly(2020, 9, 17)),
-        new (8, "Elden Ring",        "RPG",        59.99M, new DateOnly(2022, 2, 25))
-    ];
-
     [HttpGet]
-    public ActionResult<List<GameDto>> GetGames()
+    public async Task<ActionResult<List<GameDto>>> GetGames()
     {
-        return games;
+        return await db.Games.Include(g => g.Genre)
+            .Select(g => new GameDto(g.Id, g.Name, g.Genre.Name, g.Price, g.ReleaseDate))
+            .ToListAsync();
     }
 
     [HttpGet("{id}", Name = "GetGame")]
-    public ActionResult<GameDto> GetGame(int id)
+    public async Task<ActionResult<GameDto>> GetGame(int id)
     {
-        var game = games.Find(g => g.Id == id);
+        var dto = await db.Games.Include(g => g.Genre)
+            .Where(g => g.Id == id)
+            .Select(g => new GameDto(g.Id, g.Name, g.Genre.Name, g.Price, g.ReleaseDate))
+            .FirstOrDefaultAsync();
+
+        if (dto is null)
+        {
+            return NotFound();
+        }
+
+        return dto;
+    }
+
+    [HttpPost]
+    public async Task<ActionResult<GameDto>> CreateGame(CreateGameDto newGame)
+    {
+        var genre = await GetOrCreateGenreAsync(newGame.Genre);
+
+        var game = new Game
+        {
+            Name = newGame.Name,
+            Genre = genre,
+            Price = newGame.Price,
+            ReleaseDate = newGame.ReleaseDate
+        };
+
+        db.Games.Add(game);
+        await db.SaveChangesAsync();
+
+        var dto = new GameDto(game.Id, game.Name, genre.Name, game.Price, game.ReleaseDate);
+        return CreatedAtRoute("GetGame", new { id = game.Id }, dto);
+    }
+
+    [HttpPut("{id}")]
+    public async Task<IActionResult> UpdateGame(int id, FullUpdateGameDto updatedGame)
+    {
+        var game = await db.Games.FindAsync(id);
 
         if (game is null)
         {
             return NotFound();
         }
 
-        return game;
-    }
+        game.Name = updatedGame.Name;
+        game.Genre = await GetOrCreateGenreAsync(updatedGame.Genre);
+        game.Price = updatedGame.Price;
+        game.ReleaseDate = updatedGame.ReleaseDate;
 
-    [HttpPost]
-    public ActionResult<GameDto> CreateGame(CreateGameDto newGame)
-    {
-        GameDto game = new(
-            games.Count + 1,
-            newGame.Name,
-            newGame.Genre,
-            newGame.Price,
-            newGame.ReleaseDate
-        );
-
-        games.Add(game);
-
-        return CreatedAtRoute("GetGame", new { id = game.Id }, game);
-    }
-
-    [HttpPut("{id}")]
-    public IActionResult UpdateGame(int id, FullUpdateGameDto updatedGame)
-    {
-        var index = games.FindIndex(g => g.Id == id);
-
-        if (index == -1)
-        {
-            return NotFound();
-        }
-
-        games[index] = new GameDto(
-            id,
-            updatedGame.Name,
-            updatedGame.Genre,
-            updatedGame.Price,
-            updatedGame.ReleaseDate
-        );
-
+        await db.SaveChangesAsync();
         return NoContent();
     }
 
     [HttpPatch("{id}")]
-    public IActionResult PatchGame(int id, UpdateGameDto patch)
+    public async Task<IActionResult> PatchGame(int id, UpdateGameDto patch)
     {
-        var index = games.FindIndex(g => g.Id == id);
+        var game = await db.Games.FindAsync(id);
 
-        if (index == -1)
+        if (game is null)
         {
             return NotFound();
         }
 
-        var existing = games[index];
-        games[index] = new GameDto(
-            id,
-            patch.Name ?? existing.Name,
-            patch.Genre ?? existing.Genre,
-            patch.Price ?? existing.Price,
-            patch.ReleaseDate ?? existing.ReleaseDate
-        );
+        if (patch.Name is not null) game.Name = patch.Name;
+        if (patch.Genre is not null) game.Genre = await GetOrCreateGenreAsync(patch.Genre);
+        if (patch.Price is not null) game.Price = patch.Price.Value;
+        if (patch.ReleaseDate is not null) game.ReleaseDate = patch.ReleaseDate.Value;
 
+        await db.SaveChangesAsync();
         return NoContent();
     }
 
     [HttpDelete("{id}")]
-    public IActionResult DeleteGame(int id)
+    public async Task<IActionResult> DeleteGame(int id)
     {
-        var index = games.FindIndex(g => g.Id == id);
+        var game = await db.Games.FindAsync(id);
 
-        if (index == -1)
+        if (game is null)
         {
             return NotFound();
         }
 
-        games.RemoveAt(index);
+        db.Games.Remove(game);
+        await db.SaveChangesAsync();
 
         return NoContent();
+    }
+
+    private async Task<Genre> GetOrCreateGenreAsync(string name)
+    {
+        var genre = await db.Genres.FirstOrDefaultAsync(g => g.Name == name);
+
+        if (genre is null)
+        {
+            genre = new Genre { Name = name };
+            db.Genres.Add(genre);
+        }
+
+        return genre;
     }
 }
