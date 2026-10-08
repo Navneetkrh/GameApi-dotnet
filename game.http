@@ -1,4 +1,6 @@
 @host = http://localhost:5204
+# Paste the token from login/register here, then run the authorized writes below
+@token = PASTE-TOKEN-HERE
 
 ### Get hello world
 GET {{host}}/
@@ -9,13 +11,14 @@ GET {{host}}/games
 ### Minimal: get game by id
 GET {{host}}/games/1
 
-### Minimal: create a game (genreId from GET /genres)
+### Minimal: create a game (genreId from GET /genres, needs token)
 POST {{host}}/games
 Content-Type: application/json
+Authorization: Bearer {{token}}
 
 {
   "name": "Hollow Knight",
-  "genreId": 8,
+  "genreId": 16,
   "price": 14.99,
   "releaseDate": "2017-02-24"
 }
@@ -29,19 +32,21 @@ GET {{host}}/api/Games
 ### MVC: list genres
 GET {{host}}/api/Genres
 
-### MVC: update a game
+### MVC: update a game (needs token)
 PUT {{host}}/api/Games/1
 Content-Type: application/json
+Authorization: Bearer {{token}}
 
 {
   "name": "Spacewar Deluxe",
-  "genreId": 1,
+  "genreId": 9,
   "price": 4.99,
   "releaseDate": "1962-10-19"
 }
 
-### Minimal: delete a game
+### Minimal: delete a game (needs token)
 DELETE {{host}}/games/1
+Authorization: Bearer {{token}}
 
 ### Auth: register (minimal, open)
 POST {{host}}/auth/register
@@ -60,9 +65,6 @@ Content-Type: application/json
   "username": "player1",
   "password": "S3cret-pass!"
 }
-
-# paste the token from login/register, then retry the writes below
-@token = PASTE-TOKEN-HERE
 
 ### Minimal: create a game (authorized)
 POST {{host}}/games
